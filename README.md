@@ -351,7 +351,6 @@ MIT - Feel free to use this code in your projects!
 - **WebAuthn.io** - Great educational resource
 - **FIDO Alliance** - Standardizing passwordless auth
 - **Next.js Team** - Excellent framework
-- **Privy** - Inspiring this demo
 
 ---
 
