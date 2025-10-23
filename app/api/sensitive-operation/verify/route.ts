@@ -4,7 +4,7 @@ import {
   VerifyAuthenticationResponseOpts,
 } from "@simplewebauthn/server";
 import { db } from "@/lib/db";
-import { RP_ID, ORIGIN } from "@/lib/webauthn";
+import { RP_ID, getOrigin } from "@/lib/webauthn";
 import type { AuthenticationResponseJSON } from "@simplewebauthn/server/script/deps";
 
 export async function POST(request: NextRequest) {
@@ -59,10 +59,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get the actual origin from the request
+    const origin = getOrigin(request);
+    console.log("🔓 [Sensitive Op] Using origin:", origin);
+
     const opts: VerifyAuthenticationResponseOpts = {
       response: credential,
       expectedChallenge: challengeData.challenge,
-      expectedOrigin: ORIGIN,
+      expectedOrigin: origin,
       expectedRPID: RP_ID,
       authenticator: {
         credentialID: authenticator.credentialID,

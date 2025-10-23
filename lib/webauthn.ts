@@ -2,10 +2,34 @@
  * WebAuthn configuration and utilities
  */
 
-// Your site's domain and origin
+import { NextRequest } from "next/server";
+
+// Your site's domain (without protocol)
 export const RP_NAME = "Passkey Login Demo";
 export const RP_ID = process.env.NEXT_PUBLIC_RP_ID || "localhost";
+
+// Base ORIGIN - will be overridden by getOrigin() if not explicitly set
 export const ORIGIN = process.env.NEXT_PUBLIC_ORIGIN || "http://localhost:3000";
+
+/**
+ * Get the actual origin from the request
+ * This allows the same build to work on localhost:3000, localhost:3001, or any deployed URL
+ * 
+ * @param request - NextRequest object
+ * @returns The correct origin (e.g., "http://localhost:3001" or "https://myapp.netlify.app")
+ */
+export function getOrigin(request: NextRequest): string {
+  // If ORIGIN is explicitly set in env, use it
+  if (process.env.NEXT_PUBLIC_ORIGIN) {
+    return process.env.NEXT_PUBLIC_ORIGIN;
+  }
+
+  // Otherwise, detect from request headers
+  const host = request.headers.get("host") || "localhost:3000";
+  const protocol = request.headers.get("x-forwarded-proto") || "http";
+  
+  return `${protocol}://${host}`;
+}
 
 /**
  * Generate a random session ID

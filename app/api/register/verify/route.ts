@@ -4,7 +4,7 @@ import {
   VerifyRegistrationResponseOpts,
 } from "@simplewebauthn/server";
 import { db, Authenticator } from "@/lib/db";
-import { RP_ID, ORIGIN } from "@/lib/webauthn";
+import { RP_ID, getOrigin } from "@/lib/webauthn";
 import type { RegistrationResponseJSON } from "@simplewebauthn/server/script/deps";
 
 export async function POST(request: NextRequest) {
@@ -52,10 +52,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 400 });
     }
 
+    // Get the actual origin from the request
+    const origin = getOrigin(request);
+    console.log("🟢 [Register Verify] Using origin:", origin);
+
     const opts: VerifyRegistrationResponseOpts = {
       response: credential,
       expectedChallenge: challenge,
-      expectedOrigin: ORIGIN,
+      expectedOrigin: origin,
       expectedRPID: RP_ID,
     };
 
