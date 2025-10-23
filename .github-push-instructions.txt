@@ -1,0 +1,60 @@
+================================================================================
+🚀 HOW TO PUSH YOUR PASSKEY WEBAUTHN DEMO TO GITHUB
+================================================================================
+
+STEP 1: Open Terminal on your Mac
+================================================================================
+cd /Users/usmanasim/Documents/code/privy/demo
+
+
+STEP 2: Configure Git (one-time)
+================================================================================
+git config user.name "Usman Asim"
+git config user.email "your-email@example.com"
+
+
+STEP 3: Stage all files
+================================================================================
+git add .
+
+
+STEP 4: Create commit
+================================================================================
+git commit -m "feat: complete passkey webauthn demo with sensitive operations and fintech easter egg
+
+- Full WebAuthn registration and login flow with real biometric prompts
+- Real biometric re-authentication for sensitive operations (withdrawals)
+- Fintech demo with portfolio, transactions, and withdrawal approval
+- Comprehensive educational guide and README
+- StepIndicator component for visual feedback
+- Production-ready architecture with error handling
+- In-memory database with global persistence
+- Beautiful Tailwind CSS UI"
+
+
+STEP 5: Add GitHub remote
+================================================================================
+git remote add origin git@github.com:usmaneth/passkey-webauthn-demo.git
+
+
+STEP 6: Push to GitHub!
+================================================================================
+git push -u origin main
+
+
+================================================================================
+✅ DONE! Your repo is now live on GitHub
+================================================================================
+
+Share with Privy:
+https://github.com/usmaneth/passkey-webauthn-demo
+
+What they'll see:
+✨ Awesome passkey authentication demo
+🔐 Real biometric re-authentication for sensitive operations
+💼 Fintech demo with portfolio & withdrawals  
+📖 1000+ line comprehensive guide
+🎓 Beautiful, educational UI
+🚀 Production-ready code
+
+================================================================================
