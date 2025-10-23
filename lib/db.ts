@@ -7,7 +7,7 @@
 import type {
   AuthenticatorTransportFuture,
   CredentialDeviceType,
-} from "@simplewebauthn/server/script/deps";
+} from "@simplewebauthn/server/browser";
 
 export interface User {
   id: string;
