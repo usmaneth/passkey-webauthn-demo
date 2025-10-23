@@ -17,7 +17,7 @@ const STEPS = [
   { id: 'verifying', label: 'Verifying', description: 'Confirming your new passkey' },
 ];
 
-export default function RegisterForm({ onSuccess, onSwitchToRegister }: RegisterFormProps) {
+export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) {
   const [username, setUsername] = useState('');
   const [currentStep, setCurrentStep] = useState<RegistrationStep>('idle');
   const [error, setError] = useState('');
@@ -221,7 +221,7 @@ export default function RegisterForm({ onSuccess, onSwitchToRegister }: Register
       <div className="text-center text-sm">
         <button
           type="button"
-          onClick={onSwitchToRegister}
+          onClick={onSwitchToLogin}
           className="text-blue-600 dark:text-blue-400 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
         >
           Already have an account? Login
