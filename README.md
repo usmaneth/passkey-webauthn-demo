@@ -147,11 +147,12 @@ Think of it like approving a withdrawal from your bank:
 
 ## 📚 Learning Path
 
-### Level 1: Understand the Basics (5 mins)
-- Read: "What Are Passkeys?" above
-- Try: Register and login to the demo
+### Level 1: Understand the Big Picture (10 mins)
+- Read: **[🎓 BLOG.md](./BLOG.md)** - The story behind passkeys and why they matter
+- Explore: Why enterprises are moving to passkeys
+- Try: The demo (registration + login)
 
-### Level 2: See How It's Built (10 mins)
+### Level 2: See How It Works (15 mins)
 - Explore: API routes in `app/api/`
 - Review: Components in `components/`
 - Understand: How `lib/db.ts` persists state
@@ -161,12 +162,7 @@ Think of it like approving a withdrawal from your bank:
 - Understand: How biometric re-auth works
 - Trace: The flow through `/api/sensitive-operation/`
 
-### Level 4: Handle Edge Cases (10 mins)
-- Check: `lib/db.ts` for challenge management
-- See: Cookie handling in API routes
-- Review: Error handling in components
-
-### Level 5: Deploy & Extend (varies)
+### Level 4: Deploy & Extend (varies)
 - [Read Deployment Guide](./DEPLOYMENT.md)
 - [See Setup Tips](./SETUP.md)
 
@@ -248,10 +244,10 @@ netlify deploy --prod
 
 | Topic | Link |
 |-------|------|
-| **Complete Guide** | [GUIDE.md](./GUIDE.md) |
-| **Setup Instructions** | [SETUP.md](./SETUP.md) |
-| **Deployment Guide** | [DEPLOYMENT.md](./DEPLOYMENT.md) |
-| **API Reference** | See `app/api/` routes |
+| **📖 Blog Post** | [BLOG.md](./BLOG.md) - The story, not the code |
+| **⚙️ Setup Instructions** | [SETUP.md](./SETUP.md) |
+| **🚀 Deployment Guide** | [DEPLOYMENT.md](./DEPLOYMENT.md) |
+| **💻 API Reference** | See `app/api/` routes |
 
 ---
 
