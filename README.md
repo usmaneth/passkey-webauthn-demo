@@ -1,6 +1,6 @@
-# 🔐 Passkey Login Demo
+# 🔐 WebAuthn Passkey Login Demo
 
-> A **beginner-friendly**, **impressive**, and **production-ready** guide to building passwordless authentication with WebAuthn and passkeys using Next.js.
+> A **beginner-friendly** guide to building passwordless authentication with WebAuthn and passkeys using Next.js.
 
 **[📖 Full Guide →](./GUIDE.md)** | **[🚀 Deploy](./DEPLOYMENT.md)** | **[⚙️ Setup Help](./SETUP.md)**
 
