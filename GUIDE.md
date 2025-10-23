@@ -1,164 +1,220 @@
-# 🔐 Building a Passkey Login with WebAuthn
+# 🔐 Passkey Demo - Complete Technical Guide
 
-> **For**: Developers new to passkeys  
-> **Read time**: 20 minutes + code exploration  
-> **Prerequisites**: Basic TypeScript/React knowledge  
+> Deep dive into how this demo works. Learn the concepts, understand the code, extend it.
 
 ---
 
-# PART 1: Understanding Passkeys & This Demo
+## Table of Contents
 
-## What Are Passkeys?
-
-**Passkeys** are a passwordless authentication system using biometrics (Face ID, Touch ID, Fingerprint). Instead of typing a password, you authenticate with your face or fingerprint.
-
-Think of it this way:
-- 🔓 **Old way**: You remember a secret (password). Anyone who learns it can pretend to be you.
-- 🔐 **New way**: Your biometric is the secret. No one can steal it, and you can't forget it.
-
-### The Technical Foundation
-
-Passkeys use **public-key cryptography**:
-
-1. **Registration**: Your device creates a keypair
-   - **Private key** ✔️ stays on your device forever
-   - **Public key** 📤 gets sent to the server
-
-2. **Login**: Server sends a challenge, your device signs it with the private key
-   - Server verifies the signature with the public key
-   - Private key never leaves your device 🔒
-
-3. **Result**: Without the private key, no one can log in as you—even if they hack the server!
-
-This is standardized via the **WebAuthn API** (W3C standard, supported by all modern browsers).
-
-### Why This Demo?
-
-This demo shows:
-- ✅ **Full registration & login flow** with real biometric prompts
-- ✅ **Sensitive operations** with re-authentication (e.g., crypto withdrawals)
-- ✅ **Beautiful UI** that explains every step visually
-- ✅ **Production-ready code** ready to extend
-
-You can run it locally, understand how it works, and then build on it.
+1. [Passkeys 101](#passkeys-101)
+2. [Architecture Overview](#architecture-overview)
+3. [The Three Flows](#the-three-flows)
+4. [Code Walkthrough](#code-walkthrough)
+5. [Sensitive Operations](#sensitive-operations)
+6. [Common Gotchas](#common-gotchas)
+7. [Testing & Debugging](#testing--debugging)
+8. [Building on Top](#building-on-top)
 
 ---
 
-## Running the Demo
+## Passkeys 101
 
-### Setup
+### What Are Passkeys?
 
-```bash
-git clone <repo-url>
-cd demo
-npm install
-npm run dev
-```
+Passkeys are passwordless authentication using **public-key cryptography**:
 
-Open [http://localhost:3000](http://localhost:3000)
+**Registration:**
+1. User enters username
+2. Server generates random challenge
+3. Browser prompts: "Use Face ID?"
+4. Device creates keypair:
+   - **Private key** → Stays on device forever 🔒
+   - **Public key** → Sent to server 📤
+5. Server stores public key (can't fake login with it)
 
-### First Experience
+**Login:**
+1. User enters username
+2. Server generates challenge
+3. Browser prompts: "Use Face ID?"
+4. Device signs challenge with private key
+5. Server verifies signature with public key
+6. ✅ Authenticated! (Private key never leaves device)
 
-1. **Register**: Click "Register with Passkey", choose username
-2. **Biometric**: Your browser prompts for Face ID/Touch ID/Fingerprint
-3. **Dashboard**: Explore the educational content explaining what just happened
-4. **Easter Egg**: Scroll to "🎁 Imagine a Fintech App..." section
-5. **Sensitive Op**: Click "Try: Request Withdrawal" → real biometric re-auth
-6. **Logout & Login**: Test the full flow
+### Why This Matters
 
----
-
-## What's Inside
-
-### Project Structure
-
-```
-demo/
-├── app/api/
-│   ├── register/                    # Passkey registration
-│   │   ├── generate-options/        # Get registration options
-│   │   └── verify/                  # Verify & save credential
-│   ├── login/                       # Passkey login
-│   │   ├── generate-options/        # Get login challenge
-│   │   └── verify/                  # Verify authentication
-│   ├── sensitive-operation/         # 🆕 Re-auth for withdrawals
-│   │   ├── authenticate/            # Get challenge for operation
-│   │   └── verify/                  # Verify & execute operation
-│   └── [user, logout]/
-├── components/
-│   ├── RegisterForm.tsx             # Registration UI + flow
-│   ├── LoginForm.tsx                # Login UI + flow
-│   ├── Dashboard.tsx                # Post-login + fintech demo
-│   └── StepIndicator.tsx            # Visual progress tracker
-├── lib/
-│   ├── db.ts                        # In-memory database
-│   └── webauthn.ts                  # WebAuthn config
-└── public/icon.svg
-```
-
-### Key Technology Stack
-
-- **Next.js 14** - Full-stack framework
-- **SimpleWebAuthn** - Handles all the cryptography
-- **TypeScript** - Type safety
-- **Tailwind CSS** - Beautiful UI
-- **In-memory DB** - For demo (replace with real DB in production)
+| Feature | Passwords | Passkeys |
+|---------|-----------|----------|
+| Phishing-proof | ❌ | ✅ (bound to domain) |
+| Leaked password | 💀 Compromised | ✅ Never leaves device |
+| Reusable secret | ❌ Bad practice | ✅ Unique per site |
+| Biometric fallback | ❌ | ✅ Face ID/Touch ID |
+| Crosses devices | ❌ | ✅ iCloud/Google Sync |
 
 ---
 
-## Core Concepts
+## Architecture Overview
 
-### The 3-Step Authentication Dance
-
-Every authentication (login or sensitive operation) follows this pattern:
+### The Four Key Pieces
 
 ```
-┌─ STEP 1: Get Challenge ─────────┐
-│  Client → /api/.../authenticate │ → Server generates challenge
-│  Server sets session cookie       │
-└───────────────────────────────────┘
-           ↓
-┌─ STEP 2: Biometric Prompt ──────┐
-│  Browser shows biometric UI      │ → User approves with face/finger
-│  Device signs challenge           │
-└───────────────────────────────────┘
-           ↓
-┌─ STEP 3: Verify Response ───────┐
-│  Client → /api/.../verify        │ → Server verifies signature
-│  Send signed response             │ → Session established / Op executed
-└───────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│ CLIENT (Browser)                                        │
+│ ┌──────────────┐  ┌──────────────┐                      │
+│ │ React Forms  │  │ WebAuthn API │ (native, no lib)    │
+│ └──────────────┘  └──────────────┘                      │
+│                                                         │
+│ (Components: RegisterForm, LoginForm, Dashboard)        │
+└─────────────────────────────────────────────────────────┘
+          ↕ HTTP + Cookies
+┌─────────────────────────────────────────────────────────┐
+│ SERVER (Next.js API Routes)                             │
+│ ┌──────────────────────────────────────────────────┐    │
+│ │ SimpleWebAuthn (handles crypto)                 │    │
+│ │ - generateRegistrationOptions()                 │    │
+│ │ - verifyRegistrationResponse()                  │    │
+│ │ - generateAuthenticationOptions()               │    │
+│ │ - verifyAuthenticationResponse()                │    │
+│ └──────────────────────────────────────────────────┘    │
+│                                                         │
+│ (Routes: /api/register/*, /api/login/*, etc.)          │
+└─────────────────────────────────────────────────────────┘
+          ↕ Read/Write
+┌─────────────────────────────────────────────────────────┐
+│ DATABASE (In-memory for demo)                           │
+│ - Users & credentials                                   │
+│ - Challenges (temp, 5 min expiry)                       │
+│ - Sessions (cookies)                                    │
+└─────────────────────────────────────────────────────────┘
 ```
 
-This same flow works for:
-- **Registration** (new passkey)
-- **Login** (authenticate user)
-- **Sensitive operations** (approve withdrawal)
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/webauthn.ts` | RP_ID, ORIGIN, session generation |
+| `lib/db.ts` | User/credential storage, challenge management |
+| `app/api/register/generate-options/route.ts` | Start registration |
+| `app/api/register/verify/route.ts` | Finish registration |
+| `app/api/login/generate-options/route.ts` | Start login |
+| `app/api/login/verify/route.ts` | Finish login |
+| `app/api/sensitive-operation/authenticate/route.ts` | Start re-auth for operations |
+| `app/api/sensitive-operation/verify/route.ts` | Finish operation |
+| `components/RegisterForm.tsx` | Registration UI |
+| `components/LoginForm.tsx` | Login UI |
+| `components/Dashboard.tsx` | Post-login + fintech demo |
+| `components/StepIndicator.tsx` | Visual progress tracker |
 
 ---
 
-# PART 2: Building It Yourself
+## The Three Flows
 
-## Step 1: Project Setup
+### Flow 1: Registration (New User)
 
-```bash
-npx create-next-app@latest demo --typescript --tailwind
-cd demo
-npm install @simplewebauthn/browser @simplewebauthn/server
+```
+User Form
+  ↓
+[RegisterForm.tsx]
+  │ username = "alice"
+  ↓
+POST /api/register/generate-options
+  │ Server: generateRegistrationOptions()
+  │ Stores: challenge + sessionId cookie
+  ↓
+[Browser WebAuthn API]
+  │ Browser: "Alice, use your face?"
+  │ Device: Creates keypair, signs challenge
+  ↓
+[RegisterForm.tsx]
+  │ credential = signed response
+  ↓
+POST /api/register/verify
+  │ Server: verifyRegistrationResponse()
+  │ Validates: signature, origin, rpId
+  │ Stores: User + public key
+  │ Sets: userId cookie
+  ↓
+✅ REGISTERED & LOGGED IN
 ```
 
-### Initialize Git
+**Key Code Section**: `app/api/register/verify/route.ts`
 
-```bash
-git init
-git add .
-git commit -m "Initial Next.js project"
+```typescript
+// Extract public key from credential
+const { credentialID, credentialPublicKey, counter } = verification.registrationInfo!;
+
+// Save user
+const user = db.addUser(challengeData.username, {
+  credentialID,      // Will match future logins
+  credentialPublicKey,  // Used to verify signatures
+  counter,           // Prevents replay attacks
+  transports,        // Platform-specific (e.g., "platform" = biometric)
+});
 ```
+
+### Flow 2: Login (Existing User)
+
+```
+User Form
+  ↓
+[LoginForm.tsx]
+  │ username = "alice"
+  ↓
+POST /api/login/generate-options
+  │ Server: Finds Alice's public key
+  │ Server: generateAuthenticationOptions()
+  │ Stores: challenge + sessionId cookie
+  ↓
+[Browser WebAuthn API]
+  │ Browser: "Alice, use your face?"
+  │ Device: Looks for matching keypair, signs challenge
+  ↓
+[LoginForm.tsx]
+  │ credential = signed response
+  ↓
+POST /api/login/verify
+  │ Server: verifyAuthenticationResponse()
+  │ Validates: signature matches public key
+  │ Updates: counter (prevents cloning)
+  │ Sets: userId cookie
+  ↓
+✅ LOGGED IN → Dashboard
+```
+
+**Key Concept**: We never see the private key. We only verify its signature.
+
+### Flow 3: Sensitive Operation (Logged-In User)
+
+```
+[Dashboard.tsx]
+  │ "Try: Request Withdrawal" button
+  ↓
+POST /api/sensitive-operation/authenticate
+  │ Server: Requires userVerification: "required"
+  │ (enforces biometric, not just unlock)
+  │ Stores: operationSessionId cookie
+  ↓
+[Browser WebAuthn API]
+  │ Browser: "Approve withdrawal? Use Face ID"
+  │ Device: Signs challenge (AGAIN - re-auth)
+  ↓
+[Dashboard.tsx]
+  │ credential = re-signed response
+  ↓
+POST /api/sensitive-operation/verify
+  │ Server: Verifies signature (same as login)
+  │ If valid: Process withdrawal
+  │ Clear: operationSessionId
+  ↓
+✅ WITHDRAWAL APPROVED
+```
+
+**Why This Matters**: Even if someone steals the userId cookie, they can't approve transactions without the device's biometric.
 
 ---
 
-## Step 2: WebAuthn Configuration
+## Code Walkthrough
 
-Create `lib/webauthn.ts`:
+### 1. Configuration (`lib/webauthn.ts`)
 
 ```typescript
 export const RP_ID = process.env.NEXT_PUBLIC_RP_ID || "localhost";
@@ -170,38 +226,14 @@ export function generateSessionId(): string {
 }
 ```
 
-**Why these values matter:**
-- `RP_ID` (Relying Party ID) - Your domain, binds passkeys to your site
-- `ORIGIN` - Your full URL, prevents phishing attacks
-- Session ID - Uniquely tracks each authentication attempt
+**Why:**
+- `RP_ID` = Relying Party ID (your domain). Binds passkeys to your site → phishing-proof
+- `ORIGIN` = Full URL. WebAuthn verifies this matches the challenge
+- `generateSessionId()` = Unique per auth attempt (prevents replay attacks)
 
----
-
-## Step 3: In-Memory Database
-
-Create `lib/db.ts`:
+### 2. Database (`lib/db.ts`)
 
 ```typescript
-interface User {
-  id: string;
-  username: string;
-  credentials: StoredCredential[];
-}
-
-interface StoredCredential {
-  credentialID: Uint8Array;
-  credentialPublicKey: Uint8Array;
-  counter: number;
-  transports?: AuthenticatorTransportFuture[];
-}
-
-interface Challenge {
-  challenge: string;
-  username: string;
-  timestamp: number;
-}
-
-// Persist across hot-reloads using global scope
 declare global {
   var dbInstance: {
     users: User[];
@@ -212,578 +244,422 @@ declare global {
 if (!global.dbInstance) {
   global.dbInstance = { users: [], challenges: new Map() };
 }
+```
 
-export const db = {
-  findUserByUsername: (username: string) =>
-    global.dbInstance.users.find(u => u.username === username),
+**Why global scope:**
+- Next.js hot-reloading clears in-memory state
+- Global scope persists across reloads
+- Otherwise challenges expire immediately 😅
 
-  findUserById: (id: string) =>
-    global.dbInstance.users.find(u => u.id === id),
+**Key Methods:**
+```typescript
+// Save challenge for 5 minutes
+saveChallenge(sessionId, challenge, username)
 
-  addUser: (username: string, credential: StoredCredential) => {
-    const user = {
-      id: `user_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-      username,
-      credentials: [credential],
-    };
-    global.dbInstance.users.push(user);
-    return user;
+// Retrieve during verification
+getChallenge(sessionId)
+
+// Clean up after use
+deleteChallenge(sessionId)
+
+// Store credentials
+addUser(username, credential)
+
+// Update counter (replay attack prevention)
+updateCredentialCounter(userId, credentialID, newCounter)
+```
+
+### 3. Registration Start (`app/api/register/generate-options/route.ts`)
+
+```typescript
+const options = await generateRegistrationOptions({
+  rpName: RP_NAME,
+  rpID: RP_ID,
+  userName: username,
+  attestationType: 'none',
+  authenticatorSelection: {
+    authenticatorAttachment: 'platform', // Use device's biometric (not USB)
+    userVerification: 'preferred',       // Try to verify, don't fail if not
+    residentKey: 'preferred',            // Store on device if possible
   },
+});
 
-  saveChallenge: (sessionId: string, challenge: string, username?: string) => {
-    global.dbInstance.challenges.set(sessionId, {
-      challenge,
-      username: username || '',
-      timestamp: Date.now(),
-    });
-  },
+// Store challenge
+const sessionId = generateSessionId();
+db.saveChallenge(sessionId, options.challenge, username);
 
-  getChallenge: (sessionId: string) =>
-    global.dbInstance.challenges.get(sessionId),
+// Send via cookie (so browser remembers session)
+response.cookies.set('sessionId', sessionId, {
+  httpOnly: true,    // JS can't access (XSS protection)
+  secure: true,      // HTTPS only
+  sameSite: 'lax',   // CSRF protection
+  path: '/',         // Sent to all paths
+  maxAge: 60 * 5,    // 5 minutes
+});
+```
 
-  deleteChallenge: (sessionId: string) =>
-    global.dbInstance.challenges.delete(sessionId),
+**Why each setting:**
+- `authenticatorAttachment: 'platform'` → Use Mac's Touch ID, not security key
+- `httpOnly` → Prevents JavaScript from stealing the cookie
+- `sameSite: 'lax'` → Prevents cross-site request forgery
 
-  updateCredentialCounter: (userId: string, credentialID: Uint8Array, newCounter: number) => {
-    const user = global.dbInstance.users.find(u => u.id === userId);
-    if (user) {
-      const cred = user.credentials.find(c => db.areBuffersEqual(c.credentialID, credentialID));
-      if (cred) cred.counter = newCounter;
-    }
-  },
+### 4. Registration Verify (`app/api/register/verify/route.ts`)
 
-  areBuffersEqual: (a: Uint8Array, b: Uint8Array) => {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (a[i] !== b[i]) return false;
-    }
-    return true;
-  },
+```typescript
+const credential = await request.json();
+const sessionId = request.cookies.get('sessionId')?.value;
+
+// Step 1: Get stored challenge
+const challengeData = db.getChallenge(sessionId);
+if (!challengeData) throw new Error('Challenge expired');
+
+// Step 2: Verify signature
+const verification = await verifyRegistrationResponse({
+  response: credential,
+  expectedChallenge: challengeData.challenge,
+  expectedOrigin: ORIGIN,      // Must match ORIGIN
+  expectedRPID: RP_ID,         // Must match RP_ID
+});
+
+if (!verification.verified) throw new Error('Verification failed');
+
+// Step 3: Extract and save credential
+const user = db.addUser(challengeData.username, {
+  credentialID: verification.registrationInfo!.credentialID,
+  credentialPublicKey: verification.registrationInfo!.credentialPublicKey,
+  counter: verification.registrationInfo!.counter,
+});
+
+// Step 4: Log user in
+response.cookies.set('userId', user.id, { /* ... */ });
+
+// Step 5: Clean up challenge
+db.deleteChallenge(sessionId);
+```
+
+**The Critical Part**: SimpleWebAuthn verifies that:
+- ✅ Signature is valid (proves device has private key)
+- ✅ Origin matches (phishing protection)
+- ✅ Challenge matches (replay protection)
+
+If any fail → exception.
+
+### 5. Login (Same Pattern, But Simpler)
+
+Registration creates a keypair. Login just signs a challenge.
+
+```typescript
+// /api/login/generate-options
+const user = db.findUserByUsername(username);
+
+const options = await generateAuthenticationOptions({
+  rpID: RP_ID,
+  allowCredentials: user.credentials.map(cred => ({
+    id: cred.credentialID,
+    type: 'public-key' as const,
+    transports: cred.transports,  // Tells browser: "use biometric"
+  })),
+  userVerification: 'preferred',
+});
+```
+
+Then in `/api/login/verify`, we use `verifyAuthenticationResponse()` instead of `verifyRegistrationResponse()`, but the logic is identical.
+
+### 6. Sensitive Operations (The Cool Part)
+
+```typescript
+// /api/sensitive-operation/authenticate
+const options = await generateAuthenticationOptions({
+  rpID: RP_ID,
+  allowCredentials: user.credentials.map(/* ... */),
+  userVerification: 'required',  // ← DIFFERENT: Enforce biometric
+});
+```
+
+`userVerification: 'required'` tells the browser: "Don't just unlock the device, require biometric presence."
+
+This means even if someone has the userId cookie (device is unlocked), they still need to authenticate to approve the operation.
+
+---
+
+## Sensitive Operations
+
+### When to Use Re-auth
+
+- 🏦 Withdrawals/transfers
+- 🔑 API key generation
+- 👤 Account deletion
+- 📧 Email changes
+- 💳 Payment method changes
+
+### Implementation Example
+
+```typescript
+// Client (Dashboard.tsx)
+const handleWithdrawalApproval = async () => {
+  // Step 1: Get challenge
+  const optionsResponse = await fetch('/api/sensitive-operation/authenticate', {
+    method: 'POST',
+    credentials: 'include',
+  });
+  const options = await optionsResponse.json();
+
+  // Step 2: Biometric re-auth
+  const credential = await startAuthentication(options);
+
+  // Step 3: Verify
+  const verifyResponse = await fetch('/api/sensitive-operation/verify', {
+    method: 'POST',
+    body: JSON.stringify(credential),
+    credentials: 'include',
+  });
+
+  if (verifyResponse.ok) {
+    // ✅ Operation approved - process withdrawal
+    console.log('Withdrawal approved!');
+  }
 };
 ```
 
-**Key insight**: We use global scope so the database persists during Next.js hot-reloads in development.
+**What's Happening:**
+1. User clicks "Request Withdrawal"
+2. Browser: "Approve this operation? Use Face ID"
+3. User approves
+4. Server verifies biometric was actually used
+5. Server processes withdrawal
+6. No codes, no OTP, no push notifications - just biometric
 
 ---
 
-## Step 4: Registration - Generate Options
+## Common Gotchas
 
-Create `app/api/register/generate-options/route.ts`:
+### 1. "Challenge Not Found or Expired"
 
-```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { generateRegistrationOptions } from '@simplewebauthn/server';
-import { db } from '@/lib/db';
-import { RP_ID, RP_NAME, ORIGIN, generateSessionId } from '@/lib/webauthn';
+**Problem**: Registration fails, says challenge expired
 
-export async function POST(request: NextRequest) {
-  try {
-    const { username } = await request.json();
+**Cause**: Browser doesn't send `sessionId` cookie
 
-    // Check if username exists
-    if (db.findUserByUsername(username)) {
-      return NextResponse.json(
-        { error: 'Username already taken' },
-        { status: 400 }
-      );
-    }
-
-    // Generate WebAuthn registration options
-    const options = await generateRegistrationOptions({
-      rpName: RP_NAME,
-      rpID: RP_ID,
-      userName: username,
-      attestationType: 'none',
-      authenticatorSelection: {
-        authenticatorAttachment: 'platform', // Use device's biometric
-        userVerification: 'preferred',
-        residentKey: 'preferred',
-      },
-    });
-
-    // Store challenge for verification
-    const sessionId = generateSessionId();
-    db.saveChallenge(sessionId, options.challenge, username);
-
-    // Return options + set session cookie
-    const response = NextResponse.json(options);
-    response.cookies.set('sessionId', sessionId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 5, // 5 minutes
-    });
-
-    return response;
-  } catch (error) {
-    console.error('Registration error:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate registration options' },
-      { status: 500 }
-    );
-  }
-}
-```
-
-**What's happening:**
-1. Get username from client
-2. Generate cryptographic challenge
-3. Store challenge + sessionId
-4. Return challenge to client via cookie
-5. Client will show biometric prompt with this challenge
-
----
-
-## Step 5: Registration - Verify Response
-
-Create `app/api/register/verify/route.ts`:
-
-```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { verifyRegistrationResponse } from '@simplewebauthn/server';
-import { db } from '@/lib/db';
-import { RP_ID, ORIGIN } from '@/lib/webauthn';
-import type { RegistrationResponseJSON } from '@simplewebauthn/server/script/deps';
-
-export async function POST(request: NextRequest) {
-  try {
-    const credential: RegistrationResponseJSON = await request.json();
-    const sessionId = request.cookies.get('sessionId')?.value;
-
-    if (!sessionId) {
-      return NextResponse.json(
-        { error: 'No session found' },
-        { status: 400 }
-      );
-    }
-
-    const challengeData = db.getChallenge(sessionId);
-    if (!challengeData) {
-      return NextResponse.json(
-        { error: 'Challenge not found or expired' },
-        { status: 400 }
-      );
-    }
-
-    // Verify the credential signature
-    const verification = await verifyRegistrationResponse({
-      response: credential,
-      expectedChallenge: challengeData.challenge,
-      expectedOrigin: ORIGIN,
-      expectedRPID: RP_ID,
-    });
-
-    if (!verification.verified) {
-      return NextResponse.json(
-        { error: 'Verification failed' },
-        { status: 400 }
-      );
-    }
-
-    // Extract credential info
-    const { credentialID, credentialPublicKey, counter } = verification.registrationInfo!;
-
-    // Save user + credential
-    const user = db.addUser(challengeData.username, {
-      credentialID,
-      credentialPublicKey,
-      counter,
-      transports: credential.response.transports,
-    });
-
-    // Clean up
-    db.deleteChallenge(sessionId);
-
-    // Set session cookie to log user in
-    const response = NextResponse.json({ success: true });
-    response.cookies.set('userId', user.id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 1 week
-    });
-
-    return response;
-  } catch (error) {
-    console.error('Verification error:', error);
-    return NextResponse.json(
-      { error: 'Verification failed' },
-      { status: 500 }
-    );
-  }
-}
-```
-
-**What's happening:**
-1. Get signed credential from client
-2. Retrieve stored challenge
-3. Use SimpleWebAuthn to verify signature
-4. If valid, save user + credential
-5. Set userId cookie to establish session
-
----
-
-## Step 6: Client-Side Registration
-
-Create `components/RegisterForm.tsx`:
-
-```typescript
-'use client';
-
-import { useState } from 'react';
-import { startRegistration } from '@simplewebauthn/browser';
-
-interface RegisterFormProps {
-  onSuccess: (username: string) => void;
-}
-
-export default function RegisterForm({ onSuccess }: RegisterFormProps) {
-  const [username, setUsername] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      // STEP 1: Get registration options from server
-      const optionsResponse = await fetch('/api/register/generate-options', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username }),
-        credentials: 'include', // Important: send cookies!
-      });
-
-      if (!optionsResponse.ok) {
-        const data = await optionsResponse.json();
-        throw new Error(data.error || 'Failed to get options');
-      }
-
-      const options = await optionsResponse.json();
-
-      // STEP 2: Show biometric prompt
-      const credential = await startRegistration(options);
-
-      // STEP 3: Send signed credential to server for verification
-      const verifyResponse = await fetch('/api/register/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credential),
-        credentials: 'include',
-      });
-
-      if (!verifyResponse.ok) {
-        const data = await verifyResponse.json();
-        throw new Error(data.error || 'Registration failed');
-      }
-
-      // Success!
-      onSuccess(username);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleRegister} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium mb-2">Username</label>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Choose a username"
-          disabled={loading}
-          pattern="[a-zA-Z0-9_\-]+"
-          minLength={3}
-          maxLength={20}
-          required
-          className="w-full px-3 py-2 border rounded"
-        />
-      </div>
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-      >
-        {loading ? 'Creating passkey...' : 'Register with Passkey'}
-      </button>
-      {error && <div className="text-red-600 text-sm">{error}</div>}
-    </form>
-  );
-}
-```
-
-**The flow:**
-1. User enters username → clicks "Register"
-2. Fetch generates options, sets session cookie
-3. Browser prompts: "Use Face ID?"
-4. User approves → device signs challenge
-5. Send signature to /verify endpoint
-6. Server verifies → creates user account
-7. Client now logged in!
-
----
-
-## Step 7: Login (Similar Pattern)
-
-Create `app/api/login/generate-options/route.ts`:
-
-```typescript
-import { generateAuthenticationOptions } from '@simplewebauthn/server';
-import { db } from '@/lib/db';
-import { RP_ID, generateSessionId } from '@/lib/webauthn';
-
-export async function POST(request: NextRequest) {
-  try {
-    const { username } = await request.json();
-
-    const user = db.findUserByUsername(username);
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 400 });
-    }
-
-    // Generate login challenge
-    const options = await generateAuthenticationOptions({
-      rpID: RP_ID,
-      allowCredentials: user.credentials.map(cred => ({
-        id: cred.credentialID,
-        type: 'public-key' as const,
-        transports: cred.transports,
-      })),
-      userVerification: 'preferred',
-    });
-
-    // Store challenge
-    const sessionId = generateSessionId();
-    db.saveChallenge(sessionId, options.challenge, username);
-
-    const response = NextResponse.json(options);
-    response.cookies.set('sessionId', sessionId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 5,
-    });
-
-    return response;
-  } catch (error) {
-    console.error('Error:', error);
-    return NextResponse.json({ error: 'Failed' }, { status: 500 });
-  }
-}
-```
-
-Create `app/api/login/verify/route.ts` - similar to registration verify, but uses `verifyAuthenticationResponse` instead.
-
----
-
-## Step 8: Sensitive Operations (The Cool Part!)
-
-This is where you can re-authenticate for important actions like withdrawals.
-
-Create `app/api/sensitive-operation/authenticate/route.ts`:
-
-```typescript
-export async function POST(request: NextRequest) {
-  const userId = request.cookies.get('userId')?.value;
-  if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-
-  const user = db.findUserById(userId);
-  if (!user) return NextResponse.json({ error: 'User not found' }, { status: 400 });
-
-  // Same as login, but with userVerification: "required"
-  const options = await generateAuthenticationOptions({
-    rpID: RP_ID,
-    allowCredentials: user.credentials.map(cred => ({
-      id: cred.credentialID,
-      type: 'public-key' as const,
-      transports: cred.transports,
-    })),
-    userVerification: 'required', // Must verify identity for sensitive ops
-  });
-
-  const sessionId = generateSessionId();
-  db.saveChallenge(sessionId, options.challenge);
-
-  const response = NextResponse.json(options);
-  response.cookies.set('operationSessionId', sessionId, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 5,
-  });
-
-  return response;
-}
-```
-
-Then verify in `app/api/sensitive-operation/verify/route.ts`:
-
-```typescript
-export async function POST(request: NextRequest) {
-  const credential = await request.json();
-  const userId = request.cookies.get('userId')?.value;
-  const sessionId = request.cookies.get('operationSessionId')?.value;
-
-  const challengeData = db.getChallenge(sessionId);
-  if (!challengeData) return NextResponse.json({ error: 'Challenge expired' }, { status: 400 });
-
-  const user = db.findUserById(userId);
-  if (!user) return NextResponse.json({ error: 'User not found' }, { status: 400 });
-
-  // Verify signature
-  const verification = await verifyAuthenticationResponse({
-    response: credential,
-    expectedChallenge: challengeData.challenge,
-    expectedOrigin: ORIGIN,
-    expectedRPID: RP_ID,
-    authenticator: {
-      credentialID: user.credentials[0].credentialID,
-      credentialPublicKey: user.credentials[0].credentialPublicKey,
-      counter: user.credentials[0].counter,
-    },
-  });
-
-  if (!verification.verified) {
-    return NextResponse.json({ error: 'Failed' }, { status: 400 });
-  }
-
-  // ✅ Operation approved! Now execute it
-  // - Transfer funds
-  // - Approve withdrawal
-  // - Delete account
-  // - Anything requiring biometric approval
-
-  db.deleteChallenge(sessionId);
-  return NextResponse.json({ operationApproved: true });
-}
-```
-
-**Why this is powerful:**
-- User already logged in ✅
-- For sensitive action, require biometric again 🔐
-- No codes, no prompts, just one fingerprint
-- Phishing-proof: attacker can't fake it
-
----
-
-## Common Issues & Fixes
-
-### Challenge Not Found or Expired
-
-**Problem**: "Challenge not found or expired" after registration  
-**Fix**: Add `credentials: 'include'` to fetch calls
-
+**Fix**: Add `credentials: 'include'` to fetch
 ```typescript
 // ❌ Wrong
-const response = await fetch('/api/register/verify', {
+await fetch('/api/register/verify', {
   method: 'POST',
   body: JSON.stringify(credential),
 });
 
 // ✅ Correct
-const response = await fetch('/api/register/verify', {
+await fetch('/api/register/verify', {
   method: 'POST',
   body: JSON.stringify(credential),
-  credentials: 'include', // Send cookies!
+  credentials: 'include',  // ← Send cookies!
 });
 ```
 
-### RP_ID vs Origin Confusion
+### 2. "RP_ID must match origin"
 
-- **RP_ID**: Domain WITHOUT protocol → `localhost`, `example.com`
-- **Origin**: Domain WITH protocol → `http://localhost:3000`, `https://example.com`
+**Problem**: Verification fails with RP_ID mismatch
 
+**Cause**: Wrong RP_ID or ORIGIN format
+
+**Fix**: Remember the format:
 ```typescript
-// ✅ Correct
-const RP_ID = "localhost";
-const ORIGIN = "http://localhost:3000";
+// Local
+NEXT_PUBLIC_RP_ID=localhost
+NEXT_PUBLIC_ORIGIN=http://localhost:3000
 
-// ❌ Wrong
-const RP_ID = "https://localhost"; // Don't include https://
-const ORIGIN = "localhost:3000";   // Missing protocol
+// Production
+NEXT_PUBLIC_RP_ID=example.com
+NEXT_PUBLIC_ORIGIN=https://example.com
 ```
 
-### Works on Localhost, Fails in Production
+Note: RP_ID is JUST the domain, no `https://`, no `:3000`
 
-WebAuthn requires HTTPS in production (HTTP only works on localhost).
+### 3. "Works on localhost, fails on deploy"
 
-Set environment variables:
+**Problem**: WebAuthn works locally but fails after deploy
+
+**Cause**: WebAuthn requires HTTPS in production (HTTP only works on localhost)
+
+**Fix**: Set correct env vars, use HTTPS
+```bash
+# On Vercel
+NEXT_PUBLIC_RP_ID=your-app.vercel.app
+NEXT_PUBLIC_ORIGIN=https://your-app.vercel.app
 ```
-NEXT_PUBLIC_RP_ID=yourdomain.com
-NEXT_PUBLIC_ORIGIN=https://yourdomain.com
+
+### 4. Database Challenge Expires Immediately
+
+**Problem**: In development, challenges always expire
+
+**Cause**: Next.js hot-reloading clears in-memory state
+
+**Fix**: This demo uses global scope to persist across reloads
+```typescript
+declare global {
+  var dbInstance: { /* ... */ };  // ← Survives hot reload
+}
 ```
 
 ---
 
-## Testing Without Biometrics
+## Testing & Debugging
 
-Use Chrome's Virtual Authenticator:
+### Using Chrome Virtual Authenticator
+
+For testing without a real device:
 
 1. Open DevTools (F12)
-2. ⋮ → **WebAuthn**
-3. Enable "Enable virtual authenticator environment"
-4. Add authenticator
-5. Now test without real fingerprint!
+2. ⋮ → More tools → WebAuthn
+3. Check "Enable virtual authenticator environment"
+4. Click "Add authenticator"
+5. Now test without Face ID/Touch ID
+
+### Debugging Checklist
+
+- [ ] RP_ID matches domain (no `https://`)
+- [ ] ORIGIN is full URL (with `https://`)
+- [ ] Cookies are being sent (`credentials: 'include'`)
+- [ ] Challenge isn't expired (5 minute max)
+- [ ] Browser tab stays open during biometric prompt
+- [ ] Not using incognito mode (breaks some biometric APIs)
+- [ ] Device supports WebAuthn ([check here](https://caniuse.com/webauthn))
+
+### Console Logs to Watch
+
+```typescript
+// In the server logs:
+🔵 [Register Generate] Set cookie with sessionId: session_xxx
+🟢 [Register Verify] Challenge data found: YES
+```
+
+If you see `Challenge data found: NO`, the cookie isn't being sent.
 
 ---
 
-## Deploying
+## Building on Top
 
-### To Vercel (Easiest)
+### Step 1: Replace In-Memory DB
 
-1. Push code to GitHub
-2. Connect repo to Vercel
-3. Add environment variables in Vercel dashboard:
-   ```
-   NEXT_PUBLIC_RP_ID=your-domain.vercel.app
-   NEXT_PUBLIC_ORIGIN=https://your-domain.vercel.app
-   ```
-4. Deploy!
+Current: `lib/db.ts` stores everything in memory
 
-### Important: HTTPS Required
+Better for production:
+```bash
+npm install @prisma/client
+npx prisma init
+```
 
-WebAuthn requires HTTPS in production. Vercel provides free HTTPS automatically.
+Then update `lib/db.ts` to use Prisma:
+```typescript
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+export const db = {
+  addUser: async (username: string, credential: StoredCredential) => {
+    return prisma.user.create({
+      data: {
+        username,
+        credentials: {
+          create: {
+            credentialID: Buffer.from(credential.credentialID).toString('base64'),
+            credentialPublicKey: Buffer.from(credential.credentialPublicKey).toString('base64'),
+            counter: credential.counter,
+          },
+        },
+      },
+    });
+  },
+  // ... rest of methods
+};
+```
+
+### Step 2: Add Session Management
+
+Current: Simple `userId` cookie
+
+Better for production:
+```bash
+npm install next-auth @next-auth/prisma-adapter
+```
+
+### Step 3: Add Rate Limiting
+
+Protect against brute force:
+```bash
+npm install @upstash/ratelimit
+```
+
+In `/api/register/verify`:
+```typescript
+import { Ratelimit } from "@upstash/ratelimit";
+
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(5, "1 h"), // 5 regs per hour per IP
+});
+
+const { success } = await ratelimit.limit(request.ip);
+if (!success) {
+  return NextResponse.json({ error: 'Too many attempts' }, { status: 429 });
+}
+```
+
+### Step 4: Add Password Fallback
+
+During transition, support passwords too:
+
+```bash
+npm install bcryptjs
+```
+
+Add `password` column to User, check during login:
+```typescript
+// Try passkey first
+if (passkey verified) {
+  return login success;
+}
+
+// Fall back to password
+if (password && bcrypt.compare(password, user.passwordHash)) {
+  return login success;
+}
+
+return error;
+```
+
+### Step 5: Handle Lost Device
+
+Let users add recovery codes during registration:
+
+```typescript
+// During registration
+const recoveryCodes = generateRecoveryCodes(10);
+await user.update({
+  recoveryCodes: encrypt(recoveryCodes),
+});
+```
+
+Then if device is lost:
+```typescript
+// Allow login with recovery code
+if (recoveryCode && verifyRecoveryCode(user, recoveryCode)) {
+  return login success;
+  // Mark code as used
+}
+```
 
 ---
 
-## Next Steps: Production Checklist
+## Resources & Next Steps
 
-Before going live:
-- [ ] Replace in-memory DB with PostgreSQL/MongoDB
-- [ ] Add proper session management (NextAuth, Auth0)
-- [ ] Add rate limiting on API routes
-- [ ] Add logging and monitoring
-- [ ] Handle lost device (recovery codes)
-- [ ] Add email fallback
-- [ ] Test across browsers and devices
-- [ ] Add admin panel
-- [ ] Create documentation for your team
+- **[WebAuthn.io](https://webauthn.io)** - Official sandbox
+- **[SimpleWebAuthn Docs](https://simplewebauthn.dev)** - Library reference
+- **[Passkeys.dev](https://passkeys.dev)** - Industry guide
+- **[FIDO2 Spec](https://fidoalliance.org/fido2)** - Technical standard
 
 ---
 
-## Resources
+**Questions?** Open an issue on GitHub or check the code comments!
 
-- **[WebAuthn Guide](https://webauthn.guide/)** - Deep dive
-- **[SimpleWebAuthn Docs](https://simplewebauthn.dev/)** - Library reference
-- **[Can I Use WebAuthn](https://caniuse.com/webauthn)** - Browser support
-- **[FIDO Alliance](https://fidoalliance.org/)** - Standards
-- **[Passkeys.dev](https://www.passkeys.dev/)** - Official resource
-
----
-
-## Questions?
-
-The code in this repo is heavily commented. Open an issue or reach out!
-
-**Built by Usman Asim** ❤️
+Built by Usman Asim ❤️
 
