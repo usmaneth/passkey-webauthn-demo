@@ -5,7 +5,7 @@ import {
 } from "@simplewebauthn/server";
 import { db } from "@/lib/db";
 import { RP_ID, getOrigin } from "@/lib/webauthn";
-import type { AuthenticationResponseJSON } from "@simplewebauthn/server/script/deps";
+import type { AuthenticationResponseJSON } from "@simplewebauthn/browser";
 
 export async function POST(request: NextRequest) {
   try {
