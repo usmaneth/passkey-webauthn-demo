@@ -5,12 +5,10 @@ import {
 } from "@simplewebauthn/server";
 import { db, Authenticator } from "@/lib/db";
 import { RP_ID, getOrigin } from "@/lib/webauthn";
-import type { RegistrationResponseJSON } from "@simplewebauthn/server/browser";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const credential: RegistrationResponseJSON = body;
+    const credential = (await request.json()) as any;
 
     console.log("\n🟢 ====== VERIFY REGISTRATION ======");
     console.log("🟢 [Register Verify] All cookies:", request.cookies.getAll());

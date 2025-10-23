@@ -5,12 +5,10 @@ import {
 } from "@simplewebauthn/server";
 import { db } from "@/lib/db";
 import { RP_ID, getOrigin } from "@/lib/webauthn";
-import type { AuthenticationResponseJSON } from "@simplewebauthn/server/browser";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const credential: AuthenticationResponseJSON = body;
+    const credential = (await request.json()) as any;
 
     const userId = request.cookies.get("userId")?.value;
     if (!userId) {

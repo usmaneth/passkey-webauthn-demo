@@ -4,10 +4,9 @@
  * In production, use a real database like PostgreSQL, MongoDB, etc.
  */
 
-import type {
-  AuthenticatorTransportFuture,
-  CredentialDeviceType,
-} from "@simplewebauthn/server/browser";
+// Types for WebAuthn authenticators
+type AuthenticatorTransportFuture = "ble" | "internal" | "nfc" | "usb" | "hybrid";
+type CredentialDeviceType = "singleDevice" | "multiDevice";
 
 export interface User {
   id: string;
