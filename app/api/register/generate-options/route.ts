@@ -26,13 +26,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate a unique user ID
-    const userID = `user_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    // Create a new user (without credentials yet)
+    const user = db.createUser(username);
 
     const opts: GenerateRegistrationOptionsOpts = {
       rpName: RP_NAME,
       rpID: RP_ID,
-      userID: userID,
       userName: username,
       userDisplayName: username,
       // Don't prompt users for additional information about the authenticator
