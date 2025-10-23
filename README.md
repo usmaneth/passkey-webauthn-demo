@@ -4,6 +4,8 @@
 
 **[📖 Full Guide →](./GUIDE.md)** | **[🚀 Deploy](./DEPLOYMENT.md)** | **[⚙️ Setup Help](./SETUP.md)**
 
+<img width="852" height="663" alt="Screen Shot 2025-10-23 at 8 12 10 AM" src="https://github.com/user-attachments/assets/c007866e-7d4c-4501-b4d9-fce3606b7274" />
+
 ---
 
 ## 🚀 Quick Start (2 minutes)
