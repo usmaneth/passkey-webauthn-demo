@@ -35,7 +35,7 @@ Download from [nodejs.org](https://nodejs.org/) (get the LTS version)
 
 ```bash
 # Make sure you're in the project directory
-cd /Users/usmanasim/Documents/code/privy/demo
+cd passkey-webauthn-demo
 
 # Start the development server
 npm run dev
